@@ -1,0 +1,7 @@
+{
+  "name": "kai-share-ai",
+  "owner": { "name": "Kaiya" },
+  "plugins": [
+    { "name": "usage-band", "source": "./mods/usage-band", "description": "輸入框上方顯示 5h／7d 額度、重置倒數、token 與本次花費" }
+  ]
+}

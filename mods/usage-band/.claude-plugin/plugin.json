@@ -1,0 +1,1 @@
+{ "name": "usage-band", "version": "0.1.0", "description": "輸入框上方顯示 5 小時／7 天額度用量、重置倒數與本次 session 花費", "types": "./types/index.d.ts" }
