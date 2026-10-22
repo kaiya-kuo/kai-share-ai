@@ -35,3 +35,12 @@ test('snapshot keeps 5h then 7d and the svg has every pill', async () => {
     expect(source.includes(t)).toBe(true)
   }
 })
+
+test('a window past its reset shows 0% and 已重置', async () => {
+  const s = toSnapshot([{ kind: 'five_hour', percentUsed: 87, resetsAt: '2026-10-06T23:00:00Z' }], { usd: 1 })
+  const { source } = bandSvg(s, { input: 0, output: 0, cache: 0 }, base)
+  expect(source.includes('0%')).toBe(true)
+  expect(source.includes('87%')).toBe(false)
+  expect(source.includes('已重置')).toBe(true)
+  expect(fmtRemain('2026-10-06T23:00:00Z', base)).toBe('已重置')
+})

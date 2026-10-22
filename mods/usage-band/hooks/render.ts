@@ -10,7 +10,7 @@ export const fmtRemain = (resetsAt: string | undefined, nowMs: number): string =
   if (!resetsAt) return '—'
   const ms = Date.parse(resetsAt) - nowMs
   if (!Number.isFinite(ms)) return '—'
-  if (ms <= 0) return '0m'
+  if (ms <= 0) return '已重置'
   const mins = Math.floor(ms / 60000)
   const d = Math.floor(mins / 1440)
   const h = Math.floor((mins % 1440) / 60)
@@ -21,6 +21,13 @@ export const fmtRemain = (resetsAt: string | undefined, nowMs: number): string =
 }
 
 /** 視窗已經過的比例（0–1），用來畫進度條上的時間刻度 */
+/** 重置時間已過：百分比歸零，等下一次回應帶回真實數字 */
+export const isReset = (resetsAt: string | undefined, nowMs: number): boolean =>
+  resetsAt !== undefined && Date.parse(resetsAt) <= nowMs
+
+export const shownPercent = (pct: number, resetsAt: string | undefined, nowMs: number): number =>
+  isReset(resetsAt, nowMs) ? 0 : pct
+
 export const elapsed = (kind: string, resetsAt: string | undefined, nowMs: number): number | null => {
   const win = WINDOW_MS[kind]
   if (!win || !resetsAt) return null
@@ -32,7 +39,7 @@ export const elapsed = (kind: string, resetsAt: string | undefined, nowMs: numbe
 // 以 12px 系統字型估算文字寬度
 const textW = (s: string, bold = false): number => {
   let w = 0
-  for (const ch of s) w += ch === '.' || ch === ' ' ? 3.4 : ch === '%' ? 10 : ch === 'm' ? 10.5 : /[A-Z]/.test(ch) ? 8 : 7
+  for (const ch of s) w += /[\u3000-\u9fff]/.test(ch) ? 12.5 : ch === '.' || ch === ' ' ? 3.4 : ch === '%' ? 10 : ch === 'm' ? 10.5 : /[A-Z]/.test(ch) ? 8 : 7
   return w * (bold ? 1.14 : 1.06)
 }
 
@@ -75,7 +82,8 @@ const PAD = 14
 
 type Piece = { w: number; svg: (x: number, y: number) => string }
 
-const limitPill = (kind: string, pct: number, resetsAt: string | undefined, nowMs: number, tone: string, iconName: string): Piece => {
+const limitPill = (kind: string, rawPct: number, resetsAt: string | undefined, nowMs: number, tone: string, iconName: string): Piece => {
+  const pct = shownPercent(rawPct, resetsAt, nowMs)
   const label = SHORT[kind] ?? kind
   const pctText = `${Math.round(pct)}%`
   const remain = fmtRemain(resetsAt, nowMs)
@@ -83,7 +91,7 @@ const limitPill = (kind: string, pct: number, resetsAt: string | undefined, nowM
   const parts = [14, 7, textW(label), 10, barW, 10, textW(pctText, true), 14, 13, 5, textW(remain)]
   const w = PAD * 2 + parts.reduce((a, b) => a + b, 0)
   const fill = pct >= 90 ? 'bad' : pct >= 70 ? 'warn' : 'ok'
-  const mark = elapsed(kind, resetsAt, nowMs)
+  const mark = isReset(resetsAt, nowMs) ? null : elapsed(kind, resetsAt, nowMs)
   return {
     w,
     svg: (x, y) => {
@@ -147,7 +155,11 @@ export const bandSvg = (snap: UsageSnapshot, tokens: TokenTotals, nowMs: number)
 
 export const bandAlt = (snap: UsageSnapshot, tokens: TokenTotals, nowMs: number): string =>
   [
-    ...snap.limits.map(l => `${SHORT[l.kind] ?? l.kind} ${Math.round(l.percentUsed)}%，${fmtRemain(l.resetsAt, nowMs)} 後重置`),
+    ...snap.limits.map(l =>
+      isReset(l.resetsAt, nowMs)
+        ? `${SHORT[l.kind] ?? l.kind} 已重置`
+        : `${SHORT[l.kind] ?? l.kind} ${Math.round(l.percentUsed)}%，${fmtRemain(l.resetsAt, nowMs)} 後重置`,
+    ),
     `輸入 ${fmtTokens(tokens.input)}`,
     `輸出 ${fmtTokens(tokens.output)}`,
     `快取 ${fmtTokens(tokens.cache)}`,

@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register, SessionCost, SessionRateLimit } from 'claude-code'
 
 import type { UsageSnapshot } from '../types'
-import { bandAlt, bandSvg, fmtRemain, fmtTokens } from './render'
+import { bandAlt, bandSvg, fmtRemain, fmtTokens, shownPercent } from './render'
 
 const snapshot = atom({ plugin: 'usage-band', key: 'snapshot' } as const, null)
 const now = atom({ plugin: 'usage-band', key: 'now' } as const, 0)
@@ -69,15 +69,18 @@ export const register: Register = on => {
     const { Box, Text } = $.ui.resolve(e)
     return (
       <Box flexDirection="row" gap={2}>
-        {snap.limits.map(l => (
+        {snap.limits.map(l => {
+          const pct = shownPercent(l.percentUsed, l.resetsAt, nowMs)
+          return (
           <Text key={l.kind}>
             <Text dimColor>{l.kind === 'seven_day' ? '7d ' : '5h '}</Text>
-            <Text bold color={l.percentUsed >= 90 ? 'error' : l.percentUsed >= 70 ? 'warning' : 'success'}>
-              {`${Math.round(l.percentUsed)}%`}
+            <Text bold color={pct >= 90 ? 'error' : pct >= 70 ? 'warning' : 'success'}>
+              {`${Math.round(pct)}%`}
             </Text>
             <Text dimColor>{` ${fmtRemain(l.resetsAt, nowMs)}`}</Text>
           </Text>
-        ))}
+          )
+        })}
         <Text dimColor>{`↑${fmtTokens(tok.input)} ↓${fmtTokens(tok.output)} ≋${fmtTokens(tok.cache)}`}</Text>
         <Text bold>{snap.costUsd === null ? '$—' : `$${snap.costUsd.toFixed(2)}`}</Text>
       </Box>
